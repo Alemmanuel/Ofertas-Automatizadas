@@ -1,0 +1,173 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        140,
+        80
+      ],
+      "id": "1990ce03-f7db-4853-8576-63e0f70a8aeb",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://remoteok.io/api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        360,
+        80
+      ],
+      "id": "550ab171-6d28-4e52-b31c-8eb3da99d3f5",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const keywords = ['javascript', 'node.js', 'full stack'];\nlet filtered = items\n  .filter(item => {\n    const title = (item.json.position || '').toLowerCase();\n    return keywords.some(keyword => title.includes(keyword));\n  })\n  .map(item => {\n    return {\n      json: {\n        Empresa: item.json.company,\n        Cargo: item.json.position,\n        URL: item.json.url\n      }\n    };\n  });\nreturn filtered;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        80
+      ],
+      "id": "f6b70223-6dd0-4273-8d9f-e460f9de2b05",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = items.map((item, idx) => `\n  <tr>\n    <td style=\\\"padding:6px 12px;border:1px solid #ccc\\\">${idx+1}</td>\n    <td style=\\\"padding:6px 12px;border:1px solid #ccc\\\">${item.json.Empresa}</td>\n    <td style=\\\"padding:6px 12px;border:1px solid #ccc\\\">${item.json.Cargo}</td>\n    <td style=\\\"padding:6px 12px;border:1px solid #ccc\\\"><a href=\\\"${item.json.URL}\\\" target=\\\"_blank\\\">Ver oferta</a></td>\n  </tr>\n`).join('');\nconst html = `\n  <div style=\\\"font-family:Arial,sans-serif;max-width:600px;margin:auto\\\">\n    <h2 style=\\\"background:#1976d2;color:#fff;padding:12px 0;text-align:center\\\">Postulaciones Freelance</h2>\n    <table style=\\\"border-collapse:collapse;width:100%\\\">\n      <thead>\n        <tr style=\\\"background:#f5f5f5\\\">\n          <th style=\\\"padding:8px;border:1px solid #ccc\\\">#</th>\n          <th style=\\\"padding:8px;border:1px solid #ccc\\\">Empresa</th>\n          <th style=\\\"padding:8px;border:1px solid #ccc\\\">Cargo</th>\n          <th style=\\\"padding:8px;border:1px solid #ccc\\\">Enlace</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${rows}\n      </tbody>\n    </table>\n    <p style=\\\"margin-top:20px;font-size:13px;color:#888\\\">Enviado automáticamente por n8n</p>\n  </div>\n`;\nreturn [{ json: { html } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        80
+      ],
+      "id": "3ce4af39-0144-4c86-9bc1-cc861c2a0bda",
+      "name": "GroupOfOffers"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "sheetId": "1wFW3N8KAnHgwGT4sarEZNuyjutS0d_HxYTKWXyOgQa4",
+        "range": "A:C",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        800,
+        240
+      ],
+      "id": "629044cf-2508-4a10-8077-ef39f5179559",
+      "name": "Append data to a sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bVvqFfoDUs9FW5FG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "alemmanuel0412@gmail.com",
+        "subject": "=Postulaciones Diarias",
+        "message": "={{$json[\"html\"]}}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1000,
+        80
+      ],
+      "id": "bc04d1ff-7966-4af1-a720-a7405ab50e29",
+      "name": "Send a message",
+      "webhookId": "3e2f5b2a-9f6a-4f2f-b393-c15c823b9fb0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ryJvI6sfXJebDD3E",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Append data to a sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GroupOfOffers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GroupOfOffers": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c72e682d-8573-4d78-8a26-7cffe278c9a3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "72a365f7f03365ec005a15a76b96d2e2519f94b4992d19b00f72ed3774253b07"
+  },
+  "id": "1ARnAeRAL2C8DQdt",
+  "tags": []
+}
