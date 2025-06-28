@@ -1,55 +1,74 @@
-# Automated Job Offers Workflow
+# 🚀 The Ultimate Freelance Job Automation with n8n! 🌟
 
-Welcome to the **Automated Job Offers Workflow** – the most advanced, robust, and futuristic job offer automation system ever conceived! This project leverages the power of n8n to create a seamless, end-to-end pipeline that scours the web for the best freelance opportunities, processes them with cutting-edge filtering, and delivers them straight to your inbox and Google Sheets with style and precision.
-
-## 🚀 Features
-
-- **Scheduled Automation**: Wake up every morning to fresh job offers! The workflow is triggered automatically at 8 AM, ensuring you never miss a new opportunity.
-- **Real-Time Job Scraping**: Integrates with the RemoteOK API to fetch the latest freelance job postings from around the globe.
-- **Intelligent Filtering**: Utilizes a custom JavaScript filter to select only the most relevant jobs, focusing on keywords like `javascript`, `node.js`, and `full stack`.
-- **Elegant HTML Formatting**: Transforms raw job data into a beautifully styled HTML table, making your daily job digest visually appealing and easy to read.
-- **Google Sheets Integration**: Automatically appends new job offers to a Google Sheet, creating a persistent, searchable archive of opportunities.
-- **Automated Email Delivery**: Sends a daily summary email with all filtered job offers, formatted for maximum impact and readability.
-- **No Manual Intervention Needed**: Once set up, the workflow runs entirely on its own – set it and forget it!
-
-## 🛠️ How It Works
-
-1. **Schedule Trigger**: The workflow starts every day at 8 AM.
-2. **HTTP Request**: Fetches the latest job offers from the RemoteOK API.
-3. **Code Node (Filter & Map)**: Filters jobs by relevant keywords and maps them to a clean structure.
-4. **Google Sheets Node**: Appends the filtered jobs to a Google Sheet for record-keeping.
-5. **GroupOfOffers Node**: Generates a stunning HTML summary of the offers.
-6. **Gmail Node**: Sends the HTML summary to your inbox, ensuring you’re always up to date.
-
-## 🤖 Why This Project Is Revolutionary
-
-- **Unmatched Automation**: No other workflow offers this level of integration, intelligence, and hands-off operation.
-- **Enterprise-Grade Reliability**: Built on n8n, trusted by thousands of companies worldwide.
-- **Customizable & Extensible**: Easily adapt the workflow to your own keywords, APIs, or notification methods.
-- **Aesthetic Excellence**: The HTML output is not just functional – it’s beautiful.
-
-## 📈 Use Cases
-
-- Freelancers seeking daily job opportunities.
-- Agencies tracking the freelance market.
-- Anyone who wants to automate job search and notification.
-
-## 📋 Requirements
-
-- n8n instance (self-hosted or cloud)
-- Google Sheets and Gmail accounts with OAuth2 credentials
-
-## 🌟 Get Started
-
-1. Import the provided JSON workflow into your n8n instance.
-2. Set up your Google Sheets and Gmail credentials.
-3. Activate the workflow.
-4. Enjoy daily, automated job offers delivered to your inbox and Google Sheets!
-
-## 🏆 The Future of Job Search
-
-This project is not just a workflow – it’s a revolution in how freelancers discover opportunities. With its unparalleled automation, intelligence, and style, it sets a new standard for job offer management.
+Welcome to the **most powerful, dazzling, and unstoppable** freelance job automation workflow ever created with n8n!  
+This workflow will **hunt down** the best remote jobs, filter them with laser precision, save them for you, and deliver a daily summary straight to your inbox — all on autopilot! 🤖✨
 
 ---
 
-*Created with ❤️ by the future of automation.*
+## 🌞 How Does This Magic Work?
+
+1. **Daily Trigger ⏰**  
+   Every single day at 8:00 AM, your workflow wakes up and gets to work. No days off. No excuses.
+
+2. **Job Hunt Begins 🕵️‍♂️**  
+   It fetches the freshest, hottest jobs from [RemoteOK](https://remoteok.io/api).  
+   Only the best for you!
+
+3. **Memory Like an Elephant 🐘**  
+   Reads your Google Sheet to remember every job you’ve already seen.  
+   No more duplicates. Ever.
+
+4. **Data Fusion 💥**  
+   Combines the new jobs with your saved list, ready for the ultimate filter.
+
+5. **Supercharged Filtering 🔍**  
+   - Only jobs with your favorite keywords (`remoto`, `españa`, `latinoamérica`, `desarrollador`, `full stack`, `javascript`, `node.js`) make the cut.
+   - Accepts both `position` and `title` fields — nothing escapes!
+   - Ensures every job has a valid URL and is 100% new.
+   - If there are no new jobs, the workflow still runs and keeps you informed.  
+   **You’ll never miss an opportunity!**
+
+6. **Google Sheets Power-Up 📊**  
+   Instantly saves every new job to your Google Sheet.  
+   Your database grows, your opportunities multiply!
+
+7. **Stunning HTML Email Generation 💌**  
+   - If there are new jobs, you get a beautiful, professional table in your inbox.
+   - If not, you get a friendly message — so you’re always in the loop.
+
+8. **Inbox Delivery 🚀**  
+   Your daily summary lands in your email, ready to launch your day!
+
+---
+
+## 🆕 What’s New & Awesome?
+
+- **Next-Level Filtering:** Accepts both `position` and `title`, and guarantees every job has a valid URL.
+- **Unbreakable Flow:** Even if there are no new jobs, you still get a daily update.  
+- **Consistent Output:** The filter node always outputs something, so the workflow never breaks.  
+- **Spectacular HTML Emails:** Your inbox has never looked this good!
+
+---
+
+## 🎨 Customization
+
+- Change the keywords in the filter node to match your dream job.
+- Update the Gmail node to send emails wherever you want.
+- Use your own Google Sheet by changing the Sheet ID.
+
+---
+
+## 🛠️ Requirements
+
+- A Google account with access to Google Sheets and Gmail.
+- n8n set up with the right OAuth2 credentials.
+- The desire to automate your freelance job search like a boss! 😎
+
+---
+
+## 👑 Author
+
+Created with n8n, supercharged for robustness, flexibility, and a touch of magic.  
+**Let the jobs come to you!** ✨🚀
+
+---

@@ -1,0 +1,331 @@
+{
+  "name": "Ofertas Automatizadas",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        -240
+      ],
+      "id": "e317720f-9aba-4237-80c1-f3723d015846",
+      "name": "Disparador Diario"
+    },
+    {
+      "parameters": {
+        "url": "https://remoteok.io/api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -260,
+        -240
+      ],
+      "id": "277cd240-e1bd-43c2-8914-90edbacd9a38",
+      "name": "Obtener Ofertas RemoteOK"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1wFW3N8KAnHgwGT4sarEZNuyjutS0d_HxYTKWXyOgQa4",
+          "mode": "list",
+          "cachedResultName": "Postulaciones Automatizadas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wFW3N8KAnHgwGT4sarEZNuyjutS0d_HxYTKWXyOgQa4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wFW3N8KAnHgwGT4sarEZNuyjutS0d_HxYTKWXyOgQa4/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -20,
+        -240
+      ],
+      "id": "905f8715-6409-4dd1-83db-66431aa58711",
+      "name": "Leer URLs Guardadas",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bVvqFfoDUs9FW5FG",
+          "name": "Google Sheets account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// CONFIGURACIÓN\nconst MAX_OFERTAS_POR_DIA = 15;\n\n// Palabras clave para filtrar ofertas\nconst keywords = ['remoto', 'latinoamérica', 'desarrollador', 'full stack', 'javascript', 'node.js', 'python', 'frontend', 'backend', 'web developer', 'software engineer'];\n\n// Obtener todos los items del merge\nconst allItems = $input.all();\nconsole.log('Total items recibidos:', allItems.length);\n\n// Separar datos de API y datos del Sheet\nlet apiJobs = [];\nlet existingUrls = new Set();\nlet currentOffset = 0;\n\n// Procesar cada item para identificar si viene de la API o del Sheet\nallItems.forEach((item, index) => {\n  console.log(`Item ${index}:`, Object.keys(item.json || {}));\n  \n  // Si el item tiene estructura de RemoteOK API (array con jobs)\n  if (Array.isArray(item.json)) {\n    console.log('Encontrados datos de API RemoteOK');\n    // RemoteOK devuelve metadata en el primer elemento, jobs después\n    apiJobs = item.json.slice(1);\n  }\n  // Si el item tiene estructura de Google Sheets (Empresa, Cargo, URL)\n  else if (item.json && (item.json.Empresa || item.json.URL || item.json.A || item.json.C)) {\n    console.log('Encontrados datos de Google Sheets');\n    const url = item.json.URL || item.json.C || item.json['2'] || '';\n    if (url && typeof url === 'string' && url.trim()) {\n      existingUrls.add(url.trim());\n    }\n  }\n  // Si el item parece ser un job individual de la API\n  else if (item.json && (item.json.company || item.json.position || item.json.url)) {\n    console.log('Encontrado job individual de API');\n    apiJobs.push(item.json);\n  }\n  // Buscar el offset actual en los datos del sheet\n  else if (item.json && item.json.OFFSET !== undefined) {\n    currentOffset = parseInt(item.json.OFFSET) || 0;\n    console.log(`Offset actual encontrado: ${currentOffset}`);\n  }\n});\n\nconsole.log(`Jobs de API encontrados: ${apiJobs.length}`);\nconsole.log(`URLs existentes en Sheet: ${existingUrls.size}`);\nconsole.log(`Offset actual: ${currentOffset}`);\n\n// Si no hay jobs de la API, intentar obtenerlos del primer item\nif (apiJobs.length === 0 && allItems.length > 0) {\n  const firstItem = allItems[0];\n  if (firstItem.json && Array.isArray(firstItem.json)) {\n    apiJobs = firstItem.json.slice(1);\n    console.log(`Jobs obtenidos del primer item: ${apiJobs.length}`);\n  }\n}\n\n// Filtrar ofertas nuevas que coincidan con palabras clave\nconst allFilteredJobs = apiJobs\n  .filter(job => {\n    if (!job || typeof job !== 'object') return false;\n    \n    const title = (job.position || job.title || '').toLowerCase();\n    const description = (job.description || '').toLowerCase();\n    const company = (job.company || '').toLowerCase();\n    const tags = Array.isArray(job.tags) ? job.tags.join(' ').toLowerCase() : '';\n    const url = job.url || '';\n    \n    // Verificar que tenga URL válida\n    if (!url || !url.trim()) return false;\n    \n    // Verificar que no esté ya en el sheet\n    if (existingUrls.size > 0 && existingUrls.has(url.trim())) {\n      console.log(`URL duplicada encontrada: ${url}`);\n      return false;\n    }\n    \n    // Verificar palabras clave\n    const searchText = `${title} ${description} ${company} ${tags}`;\n    const hasKeyword = keywords.some(keyword => searchText.includes(keyword));\n    \n    if (hasKeyword) {\n      console.log(`Oferta válida encontrada: ${company} - ${title}`);\n    }\n    \n    return hasKeyword;\n  });\n\nconsole.log(`Total ofertas válidas encontradas: ${allFilteredJobs.length}`);\n\n// APLICAR PAGINACIÓN: Tomar las siguientes 15 ofertas según el offset\nconst startIndex = currentOffset;\nconst endIndex = currentOffset + MAX_OFERTAS_POR_DIA;\nconst paginatedJobs = allFilteredJobs.slice(startIndex, endIndex);\n\nconsole.log(`Aplicando paginación: ${startIndex} a ${endIndex}`);\nconsole.log(`Ofertas para esta ejecución: ${paginatedJobs.length}`);\n\n// Calcular el nuevo offset para la próxima ejecución\nconst newOffset = endIndex;\nconst hasMoreJobs = newOffset < allFilteredJobs.length;\n\nconsole.log(`Nuevo offset para próxima ejecución: ${newOffset}`);\nconsole.log(`¿Hay más ofertas disponibles?: ${hasMoreJobs}`);\n\n// Si no hay ofertas en esta página, reiniciar el offset\nif (paginatedJobs.length === 0) {\n  console.log('No hay ofertas en esta página, reiniciando offset a 0');\n  return [{ json: { \n    sinOfertas: true, \n    mensaje: `No hay más ofertas en la página ${Math.floor(currentOffset / MAX_OFERTAS_POR_DIA) + 1}. Reiniciando búsqueda.`, \n    totalProcesadas: apiJobs.length,\n    totalFiltradas: allFilteredJobs.length,\n    urlsExistentes: existingUrls.size,\n    maxOfertas: MAX_OFERTAS_POR_DIA,\n    offsetActual: currentOffset,\n    nuevoOffset: 0, // Reiniciar\n    paginaActual: Math.floor(currentOffset / MAX_OFERTAS_POR_DIA) + 1,\n    // Datos especiales para actualizar el offset en el sheet\n    OFFSET: 0,\n    ESTADO: 'REINICIADO'\n  }}];\n}\n\n// Preparar las ofertas con información de paginación\nconst finalJobs = paginatedJobs.map(job => ({\n  json: {\n    Empresa: job.company || 'No especificada',\n    Cargo: job.position || job.title || 'No especificado',\n    URL: job.url || ''\n  }\n}));\n\n// Agregar información del nuevo offset al final\nfinalJobs.push({\n  json: {\n    OFFSET: newOffset,\n    ESTADO: hasMoreJobs ? 'CONTINUAR' : 'REINICIAR_SIGUIENTE',\n    PAGINA: Math.floor(currentOffset / MAX_OFERTAS_POR_DIA) + 1,\n    TOTAL_DISPONIBLES: allFilteredJobs.length,\n    // Datos informativos\n  }\n});\n\n\n\nreturn finalJobs;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -240
+      ],
+      "id": "9588b96e-9e7e-4332-b1d3-c7221283825b",
+      "name": "Filtrar Nuevas Ofertas"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c6c4a6d2-7d4a-4b5e-8f9a-1b2c3d4e5f6g",
+              "leftValue": "={{ $json.sinOfertas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEqual"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -240
+      ],
+      "id": "f6463a50-c17d-491e-b86c-25e3eda98b44",
+      "name": "¿Hay ofertas nuevas?"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1wFW3N8KAnHgwGT4sarEZNuyjutS0d_HxYTKWXyOgQa4",
+          "mode": "list",
+          "cachedResultName": "Postulaciones Automatizadas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wFW3N8KAnHgwGT4sarEZNuyjutS0d_HxYTKWXyOgQa4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wFW3N8KAnHgwGT4sarEZNuyjutS0d_HxYTKWXyOgQa4/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Empresa": "={{ $json.Empresa }}",
+            "Cargo": "={{ $json.Cargo }}",
+            "URL": "={{ $json.URL }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Empresa",
+              "displayName": "Empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cargo",
+              "displayName": "Cargo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "URL",
+              "displayName": "URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        600,
+        -240
+      ],
+      "id": "37f53261-2597-4104-a61d-fee5db1e52d5",
+      "name": "Guardar Nuevas en Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bVvqFfoDUs9FW5FG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Este nodo maneja AMBOS casos: con ofertas y sin ofertas\nconst inputData = $input.all();\nconsole.log('Datos recibidos en generar HTML:', inputData.length);\n\n// Verificar si es el caso sin ofertas\nif (inputData.length === 1 && inputData[0].json && inputData[0].json.sinOfertas) {\n  const totalProcesadas = inputData[0].json.totalProcesadas || 0;\n  const urlsExistentes = inputData[0].json.urlsExistentes || 0;\n  \n  const html = `\n    <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n      <div style=\"background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;\">\n        <h1 style=\"margin: 0; font-size: 24px;\">🔍 Búsqueda Diaria de Ofertas</h1>\n      </div>\n      <div style=\"background: #f8f9fa; padding: 30px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;\">\n        <div style=\"font-size: 48px; margin-bottom: 20px;\">😴</div>\n        <h2 style=\"color: #6c757d; margin-bottom: 15px;\">No hay nuevas ofertas hoy</h2>\n        <p style=\"color: #868e96; font-size: 16px; line-height: 1.5;\">\n          Se procesaron <strong>${totalProcesadas}</strong> ofertas de RemoteOK.<br>\n          Tienes <strong>${urlsExistentes}</strong> ofertas ya guardadas.<br>\n          Ninguna nueva coincide con tus criterios.\n        </p>\n        <div style=\"margin-top: 25px; padding: 15px; background: #fff3cd; border-radius: 5px; border-left: 4px solid #ffc107;\">\n          <p style=\"margin: 0; color: #856404; font-size: 14px;\">💡 El sistema seguirá buscando automáticamente mañana a las 8:00 AM</p>\n        </div>\n      </div>\n      <div style=\"text-align: center; margin-top: 20px; color: #adb5bd; font-size: 12px;\">\n        <p>Automatizado con ❤️ por n8n | ${new Date().toLocaleDateString('es-ES')}</p>\n      </div>\n    </div>\n  `;\n  \n  return [{ json: { \n    html, \n    subject: '🔍 Búsqueda Diaria - Sin nuevas ofertas',\n    hasOfertas: false\n  }}];\n}\n\n// Si llegamos aquí, hay ofertas nuevas\nconst ofertas = inputData;\nconst totalOfertas = ofertas.length;\n\nconsole.log(`Generando HTML para ${totalOfertas} ofertas`);\n\nconst filas = ofertas.map((item, index) => {\n  const empresa = item.json.Empresa || 'No especificada';\n  const cargo = item.json.Cargo || 'No especificado';\n  const url = item.json.URL || '#';\n  \n  return `\n    <tr style=\"${index % 2 === 0 ? 'background-color: #f8f9fa;' : 'background-color: white;'}\">\n      <td style=\"padding: 12px; text-align: center; font-weight: bold; color: #495057;\">${index + 1}</td>\n      <td style=\"padding: 12px; color: #212529;\">${empresa}</td>\n      <td style=\"padding: 12px; color: #212529;\">${cargo}</td>\n      <td style=\"padding: 12px; text-align: center;\">\n        <a href=\"${url}\" target=\"_blank\" style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; text-decoration: none; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block;\">VER OFERTA</a>\n      </td>\n    </tr>\n  `;\n}).join('');\n\nconst html = `\n  <div style=\"font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px;\">\n    <div style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;\">\n      <h1 style=\"margin: 0; font-size: 24px;\">🎯 ¡Nuevas Ofertas Encontradas!</h1>\n      <p style=\"margin: 10px 0 0 0; opacity: 0.9;\">${totalOfertas} nueva${totalOfertas !== 1 ? 's' : ''} oportunidad${totalOfertas !== 1 ? 'es' : ''} para ti</p>\n    </div>\n    \n    <div style=\"background: white; border: 1px solid #e9ecef; border-top: none;\">\n      <table style=\"width: 100%; border-collapse: collapse;\">\n        <thead>\n          <tr style=\"background: #343a40; color: white;\">\n            <th style=\"padding: 15px; text-align: center; font-weight: bold;\">#</th>\n            <th style=\"padding: 15px; text-align: left; font-weight: bold;\">Empresa</th>\n            <th style=\"padding: 15px; text-align: left; font-weight: bold;\">Cargo</th>\n            <th style=\"padding: 15px; text-align: center; font-weight: bold;\">Acción</th>\n          </tr>\n        </thead>\n        <tbody>\n          ${filas}\n        </tbody>\n      </table>\n    </div>\n    \n    <div style=\"background: #d4edda; padding: 20px; border-radius: 0 0 10px 10px; border: 1px solid #c3e6cb; border-top: none;\">\n      <div style=\"text-align: center;\">\n        <p style=\"margin: 0; color: #155724; font-weight: bold;\">✅ ${totalOfertas} nueva${totalOfertas !== 1 ? 's' : ''} oferta${totalOfertas !== 1 ? 's' : ''} guardada${totalOfertas !== 1 ? 's' : ''} en tu Google Sheet</p>\n        <p style=\"margin: 5px 0 0 0; color: #155724; font-size: 14px;\">¡No olvides revisar y postularte a las que te interesen!</p>\n      </div>\n    </div>\n    \n    <div style=\"text-align: center; margin-top: 20px; color: #adb5bd; font-size: 12px;\">\n      <p>Automatizado con ❤️ por n8n | ${new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>\n    </div>\n  </div>\n`;\n\nreturn [{ json: { \n  html, \n  subject: `🎯 ${totalOfertas} Nueva${totalOfertas !== 1 ? 's' : ''} Oferta${totalOfertas !== 1 ? 's' : ''} de Trabajo`,\n  hasOfertas: true\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        -240
+      ],
+      "id": "3a0c5abc-ac0b-4639-9dcc-f5efc03dbd0d",
+      "name": "Generar HTML para Email"
+    },
+    {
+      "parameters": {
+        "sendTo": "alemmanuel0412@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1000,
+        -240
+      ],
+      "id": "bf8934e8-4b98-4360-a525-ef8539d050c9",
+      "name": "Enviar Email",
+      "webhookId": "e39f728e-bd12-4478-a26c-0959a8b6a7db",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ryJvI6sfXJebDD3E",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Disparador Diario": {
+      "main": [
+        [
+          {
+            "node": "Obtener Ofertas RemoteOK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Ofertas RemoteOK": {
+      "main": [
+        [
+          {
+            "node": "Leer URLs Guardadas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filtrar Nuevas Ofertas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer URLs Guardadas": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Nuevas Ofertas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Nuevas Ofertas": {
+      "main": [
+        [
+          {
+            "node": "¿Hay ofertas nuevas?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay ofertas nuevas?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Guardar Nuevas en Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Nuevas en Sheet": {
+      "main": [
+        [
+          {
+            "node": "Generar HTML para Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar HTML para Email": {
+      "main": [
+        [
+          {
+            "node": "Enviar Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7f40f2b5-9974-4869-91bf-347c4a2c0bd1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "72a365f7f03365ec005a15a76b96d2e2519f94b4992d19b00f72ed3774253b07"
+  },
+  "id": "1ARnAeRAL2C8DQdt",
+  "tags": []
+}
